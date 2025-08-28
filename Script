@@ -1,0 +1,167 @@
+-- Проверяем поддержку окружения эксплойта
+if not getgenv or not loadstring then
+    warn("This exploit environment is not supported!")
+    return
+end
+
+-- Создаем ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DecalSpamGui"
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+-- Создаем Frame в стиле Windows 10
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 300, 0, 200)
+Frame.Position = UDim2.new(0.5, -150, 0.5, -100)
+Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- Белый фон
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
+
+-- Добавляем тень (UIStroke)
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Thickness = 2
+UIStroke.Color = Color3.fromRGB(0, 0, 0)
+UIStroke.Transparency = 0.8
+UIStroke.Parent = Frame
+
+-- Заголовок в стиле Windows 10
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 30)
+TitleBar.BackgroundColor3 = Color3.fromRGB(0, 120, 215) -- Синий Windows 10
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = Frame
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -10, 1, 0)
+TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+TitleLabel.Text = "Decal Spam"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Font = Enum.Font.SourceSans
+TitleLabel.TextSize = 14
+TitleLabel.Parent = TitleBar
+
+-- TextBox для ввода Decal ID
+local TextBox = Instance.new("TextBox")
+TextBox.Size = UDim2.new(0, 280, 0, 30)
+TextBox.Position = UDim2.new(0, 10, 0, 50)
+TextBox.PlaceholderText = "Enter Decal ID"
+TextBox.Text = ""
+TextBox.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+TextBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+TextBox.Font = Enum.Font.SourceSans
+TextBox.TextSize = 14
+TextBox.BorderSizePixel = 1
+TextBox.BorderColor3 = Color3.fromRGB(200, 200, 200)
+TextBox.Parent = Frame
+
+-- Кнопка OK
+local OkButton = Instance.new("TextButton")
+OkButton.Size = UDim2.new(0, 100, 0, 30)
+OkButton.Position = UDim2.new(0.5, -50, 0, 100)
+OkButton.Text = "OK"
+OkButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+OkButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+OkButton.Font = Enum.Font.SourceSans
+OkButton.TextSize = 14
+OkButton.BorderSizePixel = 0
+OkButton.Parent = Frame
+
+-- Эффект наведения для кнопки
+OkButton.MouseEnter:Connect(function()
+    OkButton.BackgroundColor3 = Color3.fromRGB(0, 100, 195)
+end)
+OkButton.MouseLeave:Connect(function()
+    OkButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+end)
+
+-- Логика для перетаскивания окна
+local UserInputService = game:GetService("UserInputService")
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = Frame.Position
+    end
+end)
+
+TitleBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        Frame.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- Функция для изменения декалей и текстур на всех сторонах
+local function changeDecals(decalId)
+    if not tonumber(decalId) then
+        warn("Please enter a valid Decal ID!")
+        return
+    end
+    
+    local textureId = "rbxassetid://" .. decalId
+    
+    -- Перебираем все объекты в Workspace
+    for _, object in pairs(game.Workspace:GetDescendants()) do
+        -- Изменяем существующие декали
+        if object:IsA("Decal") then
+            pcall(function()
+                object.Texture = textureId
+            end)
+        end
+        -- Изменяем существующие текстуры
+        if object:IsA("Texture") then
+            pcall(function()
+                object.Texture = textureId
+            end)
+        end
+        -- Проверяем, если это Part, и добавляем/изменяем декали на всех сторонах
+        if object:IsA("BasePart") then
+            for _, face in pairs({Enum.NormalId.Top, Enum.NormalId.Bottom, Enum.NormalId.Left, Enum.NormalId.Right, Enum.NormalId.Front, Enum.NormalId.Back}) do
+                pcall(function()
+                    -- Проверяем, есть ли декаль на стороне
+                    local existingDecal = nil
+                    for _, child in pairs(object:GetChildren()) do
+                        if child:IsA("Decal") and child.Face == face then
+                            existingDecal = child
+                            break
+                        end
+                    end
+                    -- Если декаль существует, изменяем её
+                    if existingDecal then
+                        existingDecal.Texture = textureId
+                    else
+                        -- Создаем новую декаль, если её нет
+                        local decal = Instance.new("Decal")
+                        decal.Face = face
+                        decal.Texture = textureId
+                        decal.Parent = object
+                    end
+                end)
+            end
+        end
+    end
+end
+
+-- Обработчик нажатия кнопки OK
+OkButton.MouseButton1Click:Connect(function()
+    local inputText = TextBox.Text
+    changeDecals(inputText)
+end)
